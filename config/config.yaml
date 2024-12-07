@@ -2,7 +2,7 @@ qna_model:
   model: "gemini-1.5-pro"
   temperature: 0.8
   top_p: 0.6
-  max_token: 2000
+  max_tokens: 2000
 embedding:
   model: "indobenchmark/indobert-base-p1"
   dimension: 768
