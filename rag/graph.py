@@ -4,25 +4,31 @@ from langgraph.graph import MessagesState, StateGraph, END
 from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.checkpoint.memory import MemorySaver
 from .retrieve_tool import Retrieve
-from prompts import system_prompt
+from prompts.system_prompt import system_prompt
+from config.config import Configuration
+from dotenv import load_dotenv
+import os
 
-def llm_model(model, temperature, top_p, max_tokens, gemini_api) -> ChatGoogleGenerativeAI :
-   return ChatGoogleGenerativeAI(
-      model=model,
-      temperature=temperature,
-      top_p=top_p,
-      max_tokens=max_tokens,
-      api_key=gemini_api
-   )
+load_dotenv()
+config = Configuration().qna_model
+gemini_api = os.environ["GOOGLE_GENERATIVE_AI"]
+llm_model = ChatGoogleGenerativeAI(
+   model=config.model,
+   temperature=config.temperature,
+   top_p=config.top_p,
+   max_tokens=config.max_tokens,
+   api_key=gemini_api
+)
 
-def retrieve_or_respon(state: MessagesState, Retrieve: Retrieve, vector_store):
+def retrieve_or_response(state: MessagesState, vector_store, search_type, k):
    """Tentukan langkah untuk menggunakan tools atau langsung merespon"""
-   llm_with_tools = llm_model.bind_tools([Retrieve(vector_store=vector_store)])
+   llm_with_tools = llm_model.bind_tools([Retrieve(vector_store=vector_store, search_type=search_type, k=k)])
    response = llm_with_tools.invoke(state['messages'])
    return {"messages": [response]}
 
 def generate(state: MessagesState):
-   """Hasilkan respon"""
+   """Generate a response."""
+   print(state["messages"])
    recent_tool_messages = []
    for message in reversed(state["messages"]):
       if message.type == "tool":
@@ -30,9 +36,8 @@ def generate(state: MessagesState):
       else:
          break
    tool_messages = recent_tool_messages[::-1]
+   system_message_content = system_prompt(tool_messages)
 
-   docs_content = "\n\n".join(doc.content for doc in tool_messages)
-   system_message_content = SystemMessage(content=system_prompt(docs_content))
    conversation_messages = [
       message
       for message in state["messages"]
@@ -40,22 +45,22 @@ def generate(state: MessagesState):
       or (message.type == "ai" and not message.tool_calls)
    ]
    prompt = [SystemMessage(system_message_content)] + conversation_messages
-
+   print(prompt)
    response = llm_model.invoke(prompt)
    return {"messages": [response]}
 
-def graph_architecture(Retrieve: Retrieve, vector_store) -> StateGraph:
+def graph_architecture(vector_store, search_type, k) -> StateGraph:
    graph_builder = StateGraph(MessagesState)
-   tools = ToolNode([Retrieve(vector_store=vector_store)])
+   tools = ToolNode([Retrieve(vector_store=vector_store, search_type=search_type, k=k)])
    memory = MemorySaver()
 
-   graph_builder.add_node(retrieve_or_respon)
+   graph_builder.add_node("retrieve_or_response", lambda MessagesState: retrieve_or_response(MessagesState, vector_store, search_type, k))
    graph_builder.add_node(tools)
-   graph_builder.add_node(generate)
+   graph_builder.add_node("generate", generate)
 
-   graph_builder.set_entry_point("retrieve_or_respon")
+   graph_builder.set_entry_point("retrieve_or_response")
    graph_builder.add_conditional_edges(
-      "retrieve_or_respon",
+      "retrieve_or_response",
       tools_condition,
       {
          END: END,

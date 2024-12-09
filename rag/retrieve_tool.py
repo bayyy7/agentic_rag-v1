@@ -12,9 +12,11 @@ class Retrieve(BaseTool):
    response_format: str = "content_and_artifact"
    args_schema: Type[BaseModel] = RetrieverInput
    vector_store: FAISS
+   search_type: str
+   k: int
 
-   def _run(self, query: str, k: int) -> dict[str, any]:
-      retrieve_docs = self.vector_store.similarity_search(query=query, k=k)
+   def _run(self, query: str) -> dict[str, any]:
+      retrieve_docs = self.vector_store.search(query=query, search_type=self.search_type, k=self.k)
       serialized = "\n\n".join(
          (f"Source: {doc.metadata}\n" f"Content: {doc.page_content}") 
          for doc in retrieve_docs
