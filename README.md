@@ -55,7 +55,7 @@ pip install -r requirements.txt
 GOOGLE_GENERATIVE_AI=your_google_api_key_here
 ```
 5. Create your system prompt
-- open `prompt` folder
+- create `prompt` folder
 - create new python file `system_prompt.py`
 ```
 def system_prompt(tool_messages):
