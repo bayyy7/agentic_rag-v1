@@ -33,8 +33,8 @@ This is the implementation of using Google Gemini 1.5 Pro with langchain as fram
 
 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/desi-ai-accounting-assistant.git
-cd desi-ai-accounting-assistant
+git clone https://github.com/bayyy7/agentic_rag-v1.git
+cd agentic_rag-v1.git
 ```
 
 2. Create a virtual environment
